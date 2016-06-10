@@ -142,36 +142,70 @@ while ~isequal(mask, zeros(m,n) ) %as research µ¥¨ì omega = 0¬°¤î
     %to avoid "target" hit the border of originImage
     targetX = 0;
     targetY = 0;
-    for tx=patchIndex+1:m-patchIndex-1
-        for ty=patchIndex+1:n-patchIndex-1
+    target = uint8(zeros(patch, patch, 3));
+    %for example
+    %patch = 9*9
+    
+    for tx=hpX-floor((patch*patch)/2):hpX+floor((patch*patch)/2)
+        %out of boundary
+        if tx < patchIndex || tx > m-patchIndex
+            continue;
+        end
+        for ty=hpY-floor((patch*patch)/2):hpY+floor((patch*patch)/2)
+            %out of boundary
+            if ty < patchIndex || tx > n-patchIndex
+                continue;
+            end
             
-            target = uint8(zeros(patch, patch, 3));
+            %in mask
+            %inside (tx, ty) patch
+            %there can't be any mask == white inside
+            ismask = 0;
+            for mi=tx-patchIndex:tx+patchIndex
+                for mj=ty-patchIndex:ty+patchIndex
+                    if mask(mi,mj) == 255
+                        ismask = 1;
+                    end
+                end
+            end
+            if ismask == 1
+                continue;
+            end
+            
+            
+            SSD = 0;
+            tmptarget = uint8(zeros(patch, patch, 3));
             %fill the target
             for px=-patchIndex:patchIndex
                 for py=-patchIndex:patchIndex
-                    target(px+patchIndex+1, py+patchIndex+1, :) = originImage(tx+px, ty+py,:);
+                    tmptarget(px+patchIndex+1, py+patchIndex+1, :) = originImage(tx+px, ty+py,:);
                     %target(1~patch)
                 end
             end
-            figure;imshow(target);title('target');
+            %figure;imshow(tmptarget);title('tmptarget');
             
             %compute SSD
-            SSD = 0;
             for x=1:patch
                 for y=1:patch
-                    R = priority(x,y,1) - target(x,y,1); 
-                    G = priority(x,y,2) - target(x,y,2);
-                    B = priority(x,y,3) - target(x,y,3);
+                    R = highPriority(x,y,1) - tmptarget(x,y,1); 
+                    G = highPriority(x,y,2) - tmptarget(x,y,2);
+                    B = highPriority(x,y,3) - tmptarget(x,y,3);
                     SSD = SSD + R*R + G*G + B*B;
                 end
             end
             if SSD < min
                min = SSD;
+               targetX = tx;
+               targetY = ty;
+               target = tmptarget;
             end
-            
-            
         end
     end
+    figure;imshow(target);title('target');
+    fprintf('HAHAHAHAHAHAHAHAHA\n');
+    
+    %ready to copy the target to the highPriority
+    
 
 end
 

@@ -143,14 +143,17 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     targetX = 0;
     targetY = 0;
     target = uint8(zeros(patch, patch, 3));
+    
+    %(tx,ty) is the center of patch*patch(81)
+    %so (tx,ty) should in the patchIndex(4) to m-patchIndex(4) 
     for tx=hpX-floor((patch*patch)/2):hpX+floor((patch*patch)/2)
         %out of boundary
-        if tx < 1 || tx > m
+        if tx < patchIndex || tx > m-patchIndex
             continue;
         end
         for ty=hpY-floor((patch*patch)/2):hpY+floor((patch*patch)/2)
             %out of boundary
-            if ty < 1 || tx > n
+            if ty < patchIndex || tx > n-patchIndex
                 continue;
             end
             
@@ -200,6 +203,8 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     end
     figure;imshow(target);title('target');
     fprintf('HAHAHAHAHAHAHAHAHA\n');
+    
+    %ready to copy the target to the highPriority
     
 
 end
