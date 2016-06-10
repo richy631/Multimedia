@@ -1,6 +1,7 @@
 clear;
 clear all;
-imageName = 'bungee.png';
+%imageName = 'bungee.png';
+imageName = 'air';
 originImage = imread(imageName);
 
 %如果要重畫mask，把以下的註解取消
@@ -55,7 +56,7 @@ end
 %figure;imshow(boundary);title('boundary');
 
 %計算data(直接套用gradient)
-%compute "data"(use matlab function "gr)
+%compute "data"(use matlab function "gradient")
 grayOriginImage = rgb2gray(originImage);
 grayOriginImage = im2single(grayOriginImage);
 [fx,fy] = gradient(grayOriginImage);
@@ -68,15 +69,18 @@ data = gradtnorm + log10(1+gradtnorm);
 
 
 %計算confidence (patch裡面原圖與mask的比例)
+% compute "confidence 
 confidence = double(1-mask);
 %figure;imshow(confidence);
 
-%indexM是boundary總共的index數目
+%indexM是indexy總數目
+%indexM is the length of index
+
 [indexM, indexN] = size(index);
 
 patchIndex = floor(patch/2);
 
-for i=1:indexM %每個boundary 的 index跑一次
+for i=1:indexM %每個index跑一次 %run every index
    count = 0;
    for px=-patchIndex:patchIndex
        for py=-patchIndex:patchIndex
@@ -93,12 +97,18 @@ priority = data.* confidence;
 figure;imshow(priority);title('priority');
 
 %開始inpainting了
+%START TO INPAINTING
 
-while ~isequal(mask, zeros(m,n) ) %as research 等到 ? = 0為止
-                                  %? 就是這裡的mask
+while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
+                                  %omega 就是這裡的mask
+                                  %as sesearch, until omdga = 0
+                                  %omega is mask here
     %找最大的priority
+    %find maximum priority
     max = -1;
+    
     %high priority X, Y 座標
+    %high priority coordinate (hpX, hpY)
     hpX = 0;
     hpY = 0;
     for i=1:indexM
@@ -110,19 +120,35 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 ? = 0為止
     end
 
     %決定highPriority 是哪塊
+    %find highPriority
     highPriority = uint8(zeros(patch, patch, 3));
     for i=1:patch
        for j=1:patch
            highPriority(i,j,:) = source(hpX+i-patchIndex-1, hpY+j-patchIndex-1, :);
        end
     end
-    figure;imshow(highPriority);
+    figure;imshow(highPriority);title('highPriority');
     
     
     %找最相似的那塊
-    target = zeros(patch, patch);
+    %find the most similar target(patch X patch)
+    
+    
+    %避免target 碰到原圖邊界
+    %to avoid "target" hit the border of originImage
     for i=patchIndex+1:m-patchIndex-1
         for j=patchIndex+1:n-patchIndex-1
+            
+            target = uint8(zeros(patch, patch, 3));
+            %fill the target
+            for px=-patchIndex:patchIndex
+                for py=-patchIndex:patchIndex
+                    target(px+patchIndex+1, py+patchIndex+1, :) = originImage(i+px, j+py,:);
+                    %target(1~patch)
+                end
+            end
+            figure;imshow(target);title('target');
+            
             
         end
     end

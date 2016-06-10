@@ -1,12 +1,16 @@
 clear;
 clear all;
-imageName = 'bungee.png';
-originImage = imread(imageName);
+%imageName = 'bungee.png';
+imageName = 'air';
+originImage = imread([imageName, '.jpg']);
 
 %如果要重畫mask，把以下的註解取消
 %if you want to redraw mask, cancel the comment below
-%mask = im2uint8(roipoly(img));
-mask = imread('bungee-mask.png');
+mask = im2uint8(roipoly(originImage));
+imwrite(mask, [imageName, '-mask.jpg']);
+%mask = imread('bungee-mask.png');
+
+
 %figure;imshow(img);
 %figure;imshow(mask);
 [m,n] = size(mask);
@@ -126,14 +130,28 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
            highPriority(i,j,:) = source(hpX+i-patchIndex-1, hpY+j-patchIndex-1, :);
        end
     end
-    figure;imshow(highPriority);
+    figure;imshow(highPriority);title('highPriority');
     
     
     %找最相似的那塊
     %find the most similar target(patch X patch)
-    target = zeros(patch, patch);
+    
+    
+    %避免target 碰到原圖邊界
+    %to avoid "target" hit the border of originImage
     for i=patchIndex+1:m-patchIndex-1
         for j=patchIndex+1:n-patchIndex-1
+            
+            target = uint8(zeros(patch, patch, 3));
+            %fill the target
+            for px=-patchIndex:patchIndex
+                for py=-patchIndex:patchIndex
+                    target(px+patchIndex+1, py+patchIndex+1, :) = originImage(i+px, j+py,:);
+                    %target(1~patch)
+                end
+            end
+            figure;imshow(target);title('target');
+            
             
         end
     end
