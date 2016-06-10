@@ -6,13 +6,13 @@ originImage = imread([imageName, '.jpg']);
 
 %如果要重畫mask，把以下的註解取消
 %if you want to redraw mask, cancel the comment below
-mask = im2uint8(roipoly(originImage));
-imwrite(mask, [imageName, '-mask.jpg']);
-%mask = imread('bungee-mask.png');
+%mask = im2uint8(roipoly(originImage));
+%imwrite(mask, [imageName, '-mask.png']);
+mask = imread([imageName, '-mask.png']);
 
 
 %figure;imshow(img);
-%figure;imshow(mask);
+figure;imshow(mask);title('mask');
 [m,n] = size(mask);
 boundary = zeros(m,n);
 
@@ -56,7 +56,7 @@ for i=1:m
         end
     end
 end
-%figure;imshow(boundary);title('boundary');
+figure;imshow(boundary);title('boundary');
 
 %計算data(直接套用gradient)
 %compute "data"(use matlab function "gradient")
@@ -74,7 +74,7 @@ data = gradtnorm + log10(1+gradtnorm);
 %計算confidence (patch裡面原圖與mask的比例)
 % compute "confidence 
 confidence = double(1-mask);
-%figure;imshow(confidence);
+%figure;imshow(confidence);title('confidence');
 
 %indexM是indexy總數目
 %indexM is the length of index
@@ -97,7 +97,7 @@ end
 
 priority = data.* confidence;
 [priX, priY] = size(priority);
-figure;imshow(priority);title('priority');
+%figure;imshow(priority);title('priority');
 
 %開始inpainting了
 %START TO INPAINTING
@@ -130,7 +130,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
            highPriority(i,j,:) = source(hpX+i-patchIndex-1, hpY+j-patchIndex-1, :);
        end
     end
-    figure;imshow(highPriority);title('highPriority');
+    %figure;imshow(highPriority);title('highPriority');
     
     
     %找最相似的那塊
@@ -138,23 +138,69 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     
     
     %避免target 碰到原圖邊界
+    min = 99999999;
     %to avoid "target" hit the border of originImage
-    for i=patchIndex+1:m-patchIndex-1
-        for j=patchIndex+1:n-patchIndex-1
+    targetX = 0;
+    targetY = 0;
+    target = uint8(zeros(patch, patch, 3));
+    for tx=hpX-floor((patch*patch)/2):hpX+floor((patch*patch)/2)
+        %out of boundary
+        if tx < 1 || tx > m
+            continue;
+        end
+        for ty=hpY-floor((patch*patch)/2):hpY+floor((patch*patch)/2)
+            %out of boundary
+            if ty < 1 || tx > n
+                continue;
+            end
             
-            target = uint8(zeros(patch, patch, 3));
+            %in mask
+            %inside (tx, ty) patch
+            %there can't be any mask == white inside
+            ismask = 0;
+            for mi=tx-patchIndex:tx+patchIndex
+                for mj=ty-patchIndex:ty+patchIndex
+                    if mask(mi,mj) == 255
+                        ismask = 1;
+                    end
+                end
+            end
+            if ismask == 1
+                continue;
+            end
+            
+            
+            SSD = 0;
+            tmptarget = uint8(zeros(patch, patch, 3));
             %fill the target
             for px=-patchIndex:patchIndex
                 for py=-patchIndex:patchIndex
-                    target(px+patchIndex+1, py+patchIndex+1, :) = originImage(i+px, j+py,:);
+                    tmptarget(px+patchIndex+1, py+patchIndex+1, :) = originImage(tx+px, ty+py,:);
                     %target(1~patch)
                 end
             end
-            figure;imshow(target);title('target');
+            %figure;imshow(tmptarget);title('tmptarget');
             
-            
+            %compute SSD
+            for x=1:patch
+                for y=1:patch
+                    R = highPriority(x,y,1) - tmptarget(x,y,1); 
+                    G = highPriority(x,y,2) - tmptarget(x,y,2);
+                    B = highPriority(x,y,3) - tmptarget(x,y,3);
+                    SSD = SSD + R*R + G*G + B*B;
+                end
+            end
+            if SSD < min
+               min = SSD;
+               targetX = tx;
+               targetY = ty;
+               target = tmptarget;
+            end
         end
     end
+    figure;imshow(target);title('target');
+    fprintf('HAHAHAHAHAHAHAHAHA\n');
+    
 
 end
 
