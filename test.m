@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 clear;
 clear all;
 imageName = 'bungee.png';
@@ -121,3 +122,4 @@ while ~isequal(mask, zeros(m,n) ) %as research µ¥¨ì ? = 0¬°¤î
     end
 
 end
+
