@@ -20,15 +20,15 @@ boundary = zeros(m,n);
 %size of patch
 patch = 9;
 
-source = originImage;
+maskedImage = originImage;
 for i=1:m
     for j=1:n
         if mask(i,j) == 255
-            source(i,j,:) = 0;
+            maskedImage(i,j,:) = 0;
         end
     end
 end
-figure;imshow(source);title('source');
+figure;imshow(maskedImage);title('maskedImage');
 
 
 % 計算boundary
@@ -60,14 +60,14 @@ figure;imshow(boundary);title('boundary');
 
 %計算data(直接套用gradient)
 %compute "data"(use matlab function "gradient")
-grayOriginImage = rgb2gray(originImage);
-grayOriginImage = im2single(grayOriginImage);
-[fx,fy] = gradient(grayOriginImage);
+grayMaskedImage = rgb2gray(maskedImage);
+grayMaskedImage = im2single(grayMaskedImage);
+[fx,fy] = gradient(grayMaskedImage);
 gradtnorm = sqrt((fx .^2) + (fy .^2));
 data = gradtnorm + log10(1+gradtnorm);
 %figure;imshow(fx);
 %figure;imshow(fy);
-%figure;imshow(data);title('data');
+figure;imshow(data);title('data');
 
 
 
@@ -107,6 +107,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
                                   %as sesearch, until omdga = 0
                                   %omega is mask here
     %找最大的priority
+    %everytime in the while loop will find a highPriority
     %find maximum priority
     max = -1;
     
@@ -125,66 +126,66 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     %決定highPriority 是哪塊
     %find highPriority
     highPriority = uint8(zeros(patch, patch, 3));
-    for i=1:patch
-       for j=1:patch
-           highPriority(i,j,:) = source(hpX+i-patchIndex-1, hpY+j-patchIndex-1, :);
+    for i= -patchIndex:patchIndex
+       for j= -patchIndex:patchIndex
+           highPriority(i+patchIndex+1,j+patchIndex+1,:) = maskedImage(hpX+i, hpY+j, :);
        end
     end
-    %figure;imshow(highPriority);title('highPriority');
+    figure;imshow(highPriority);title('highPriority');
     
     
     %找最相似的那塊
     %find the most similar target(patch X patch)
     
     
-    %避免target 碰到原圖邊界
+    %避免 碰到原圖邊界
     min = 99999999;
     %to avoid "target" hit the border of originImage
     targetX = 0;
     targetY = 0;
     target = uint8(zeros(patch, patch, 3));
-    %for example
-    %patch = 9*9
     
+    %(tx,ty) is the center of patch*patch(81)
+    %so (tx,ty) should in the patchIndex(4) to m-patchIndex(4) 
     for tx=hpX-floor((patch*patch)/2):hpX+floor((patch*patch)/2)
         %out of boundary
-        if tx < patchIndex || tx > m-patchIndex
+        if tx <= patchIndex || tx >= m-patchIndex
             continue;
         end
         for ty=hpY-floor((patch*patch)/2):hpY+floor((patch*patch)/2)
             %out of boundary
-            if ty < patchIndex || tx > n-patchIndex
+            if ty <= patchIndex || ty >= n-patchIndex
                 continue;
             end
-            
+            %just show tx,ty
+            tx
+            ty
             %in mask
             %inside (tx, ty) patch
             %there can't be any mask == white inside
+            
+            
             ismask = 0;
-            for mi=tx-patchIndex:tx+patchIndex
-                for mj=ty-patchIndex:ty+patchIndex
-                    if mask(mi,mj) == 255
-                        ismask = 1;
-                    end
-                end
-            end
-            if ismask == 1
-                continue;
-            end
-            
-            
-            SSD = 0;
             tmptarget = uint8(zeros(patch, patch, 3));
             %fill the target
             for px=-patchIndex:patchIndex
                 for py=-patchIndex:patchIndex
-                    tmptarget(px+patchIndex+1, py+patchIndex+1, :) = originImage(tx+px, ty+py,:);
-                    %target(1~patch)
+                    if mask(tx+px, ty+py) == 255
+                        ismask = 1;
+                    else
+                        tmptarget(px+patchIndex+1, py+patchIndex+1, :) = maskedImage(tx+px, ty+py,:);
+                    end
                 end
+            end
+            
+            if ismask == 1
+                continue;
             end
             %figure;imshow(tmptarget);title('tmptarget');
             
+            
             %compute SSD
+            SSD = 0;
             for x=1:patch
                 for y=1:patch
                     R = highPriority(x,y,1) - tmptarget(x,y,1); 
@@ -193,6 +194,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
                     SSD = SSD + R*R + G*G + B*B;
                 end
             end
+            
             if SSD < min
                min = SSD;
                targetX = tx;
@@ -201,11 +203,26 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
             end
         end
     end
+    %show targetX and targetY in the command line
+    targetX
+    targetY
     figure;imshow(target);title('target');
-    fprintf('HAHAHAHAHAHAHAHAHA\n');
+    
     
     %ready to copy the target to the highPriority
+    for i=-patchIndex:patchIndex
+        for j=-patchIndex:patchIndex
+            maskedImage(hpX+i, hpY+j,:) = target(1+patchIndex+i, 1+patchIndex + j,:);
+            %update the mask;
+            mask(hpX+i, hpY+j) = 0;
+        end 
+    end
     
+    figure;imshow(maskedImage);title('after fill in masked Image');
+    figure;imshow(mask);title('mask after:');
+    
+    fprintf('HAHAHAHAHAHAHAHAHA\n');
+    %update the confidence
 
 end
 
