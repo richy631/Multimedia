@@ -12,7 +12,7 @@ mask = imread([imageName, '-mask.png']);
 
 
 %figure;imshow(img);
-figure;imshow(mask);title('mask');
+%figure;imshow(mask);title('mask');
 [m,n] = size(mask);
 boundary = zeros(m,n);
 
@@ -28,7 +28,7 @@ for i=1:m
         end
     end
 end
-figure;imshow(maskedImage);title('maskedImage');
+%figure;imshow(maskedImage);title('maskedImage');
 
 
 % 計算boundary
@@ -45,6 +45,33 @@ for i=2:m-1
         end
     end
 end
+%figure;imshow(boundary);title('boundary');
+
+
+
+
+%計算data(直接套用gradient)
+%compute "data"(use matlab function "gradient")
+grayMaskedImage = rgb2gray(maskedImage);
+grayMaskedImage = im2single(grayMaskedImage);
+[fx,fy] = gradient(grayMaskedImage);
+gradtnorm = sqrt((fx .^2) + (fy .^2));
+data = gradtnorm + log10(1+gradtnorm);
+%figure;imshow(fx);
+%figure;imshow(fy);
+%figure;imshow(data);title('data');
+
+
+%change RGB to LAB
+colorTransform = makecform('srgb2lab');
+maskedImage = applycform(maskedImage , colorTransform);
+
+
+
+%計算confidence (patch裡面原圖與mask的比例)
+% compute "confidence 
+confidence = double(1-mask);
+%figure;imshow(confidence);title('confidence');
 
 %index 為mask內所有點座標
 %index is all coordinate(x,u) in mask
@@ -56,25 +83,6 @@ for i=1:m
         end
     end
 end
-figure;imshow(boundary);title('boundary');
-
-%計算data(直接套用gradient)
-%compute "data"(use matlab function "gradient")
-grayMaskedImage = rgb2gray(maskedImage);
-grayMaskedImage = im2single(grayMaskedImage);
-[fx,fy] = gradient(grayMaskedImage);
-gradtnorm = sqrt((fx .^2) + (fy .^2));
-data = gradtnorm + log10(1+gradtnorm);
-%figure;imshow(fx);
-%figure;imshow(fy);
-figure;imshow(data);title('data');
-
-
-
-%計算confidence (patch裡面原圖與mask的比例)
-% compute "confidence 
-confidence = double(1-mask);
-%figure;imshow(confidence);title('confidence');
 
 %indexM是indexy總數目
 %indexM is the length of index
@@ -95,8 +103,7 @@ for i=1:indexM %每個index跑一次 %run every index
    confidence(index(i,1), index(i,2)) = double(count/(patch*patch));
 end
 
-priority = data.* confidence;
-[priX, priY] = size(priority);
+
 %figure;imshow(priority);title('priority');
 
 %開始inpainting了
@@ -106,6 +113,8 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
                                   %omega 就是這裡的mask
                                   %as sesearch, until omdga = 0
                                   %omega is mask here
+    priority = data.* confidence;
+    [priX, priY] = size(priority);
     %找最大的priority
     %everytime in the while loop will find a highPriority
     %find maximum priority
@@ -131,7 +140,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
            highPriority(i+patchIndex+1,j+patchIndex+1,:) = maskedImage(hpX+i, hpY+j, :);
        end
     end
-    figure;imshow(highPriority);title('highPriority');
+    %figure;imshow(highPriority);title('highPriority');
     
     
     %找最相似的那塊
@@ -157,9 +166,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
             if ty <= patchIndex || ty >= n-patchIndex
                 continue;
             end
-            %just show tx,ty
-            tx
-            ty
+
             %in mask
             %inside (tx, ty) patch
             %there can't be any mask == white inside
@@ -188,10 +195,10 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
             SSD = 0;
             for x=1:patch
                 for y=1:patch
-                    R = highPriority(x,y,1) - tmptarget(x,y,1); 
-                    G = highPriority(x,y,2) - tmptarget(x,y,2);
-                    B = highPriority(x,y,3) - tmptarget(x,y,3);
-                    SSD = SSD + R*R + G*G + B*B;
+                    L = highPriority(x,y,1) - tmptarget(x,y,1); 
+                    a = highPriority(x,y,2) - tmptarget(x,y,2);
+                    b = highPriority(x,y,3) - tmptarget(x,y,3);
+                    SSD = SSD + L*L + a*a + b*b;
                 end
             end
             
@@ -206,7 +213,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     %show targetX and targetY in the command line
     targetX
     targetY
-    figure;imshow(target);title('target');
+    %figure;imshow(target);title('target');
     
     
     %ready to copy the target to the highPriority
@@ -218,11 +225,52 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
         end 
     end
     
-    figure;imshow(maskedImage);title('after fill in masked Image');
-    figure;imshow(mask);title('mask after:');
+    %for showing result
+    tmpImage 
+    colorTransform = makecform('lab2srgb');
+    maskedImage = applycform(maskedImage , colorTransform);
+    figure(10);imshow(maskedImage);title('after fill in masked Image');
+    %change RGB to LAB
+    colorTransform = makecform('srgb2lab');
+    maskedImage = applycform(maskedImage , colorTransform);
+    
+    %figure;imshow(mask);title('mask after:');
     
     fprintf('HAHAHAHAHAHAHAHAHA\n');
     %update the confidence
+    % compute "confidence 
+    confidence = double(1-mask);
+    %figure;imshow(confidence);title('confidence');
+
+    %index 為mask內所有點座標
+    %index is all coordinate(x,u) in mask
+    index = [];
+    for i=1:m
+        for j=1:n
+            if mask(i,j) == 255
+                index = [index; i j];
+            end
+        end
+    end
+
+    %indexM是indexy總數目
+    %indexM is the length of index
+
+    [indexM, indexN] = size(index);
+
+    patchIndex = floor(patch/2);
+
+    for i=1:indexM %每個index跑一次 %run every index
+       count = 0;
+       for px=-patchIndex:patchIndex
+           for py=-patchIndex:patchIndex
+               if mask(index(i,1)+px, index(i,2)+py) == 0
+                   count = count + 1;
+               end
+           end
+       end
+       confidence(index(i,1), index(i,2)) = double(count/(patch*patch));
+    end
 
 end
 

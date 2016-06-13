@@ -12,7 +12,7 @@ mask = imread([imageName, '-mask.png']);
 
 
 %figure;imshow(img);
-figure;imshow(mask);title('mask');
+%figure;imshow(mask);title('mask');
 [m,n] = size(mask);
 boundary = zeros(m,n);
 
@@ -28,7 +28,7 @@ for i=1:m
         end
     end
 end
-figure;imshow(maskedImage);title('maskedImage');
+%figure;imshow(maskedImage);title('maskedImage');
 
 
 % 璸衡boundary
@@ -45,18 +45,10 @@ for i=2:m-1
         end
     end
 end
+%figure;imshow(boundary);title('boundary');
 
-%index maskず┮Τ翴畒夹
-%index is all coordinate(x,u) in mask
-index = [];
-for i=1:m
-    for j=1:n
-        if mask(i,j) == 255
-            index = [index; i j];
-        end
-    end
-end
-figure;imshow(boundary);title('boundary');
+
+
 
 %璸衡data(钡甅ノgradient)
 %compute "data"(use matlab function "gradient")
@@ -67,7 +59,7 @@ gradtnorm = sqrt((fx .^2) + (fy .^2));
 data = gradtnorm + log10(1+gradtnorm);
 %figure;imshow(fx);
 %figure;imshow(fy);
-figure;imshow(data);title('data');
+%figure;imshow(data);title('data');
 
 
 %change RGB to LAB
@@ -81,12 +73,25 @@ maskedImage = applycform(maskedImage , colorTransform);
 confidence = double(1-mask);
 %figure;imshow(confidence);title('confidence');
 
+
+
+patchIndex = floor(patch/2);
+
+%index maskず┮Τ翴畒夹
+%index is all coordinate(x,u) in mask
+index = [];
+for i=1:m
+    for j=1:n
+        if mask(i,j) == 255
+            index = [index; i j];
+        end
+    end
+end
+
 %indexM琌indexy羆计ヘ
 %indexM is the length of index
 
 [indexM, indexN] = size(index);
-
-patchIndex = floor(patch/2);
 
 for i=1:indexM %–index禲Ω %run every index
    count = 0;
@@ -100,8 +105,7 @@ for i=1:indexM %–index禲Ω %run every index
    confidence(index(i,1), index(i,2)) = double(count/(patch*patch));
 end
 
-priority = data.* confidence;
-[priX, priY] = size(priority);
+
 %figure;imshow(priority);title('priority');
 
 %秨﹍inpainting
@@ -111,9 +115,35 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
                                   %omega 碞琌硂柑mask
                                   %as sesearch, until omdga = 0
                                   %omega is mask here
-    %т程priority
+	
+    %STEP1 find all index in mask
+    
+    %index maskず┮Τ翴畒夹
+    %index is all coordinate(x,u) in mask
+    index = [];
+    for i=1:m
+        for j=1:n
+            if mask(i,j) == 255
+                index = [index; i j];
+            end
+        end
+    end
+
+    %indexM琌indexy羆计ヘ
+    %indexM is the length of index
+
+    [indexM, indexN] = size(index);
+    
+    %STEP2 compute the priority
+    
+    priority = data.* confidence;
+    [priX, priY] = size(priority);
+    
+    %STEP3 find the patch with maximum priority
+    
+    %т程prioritypatch
     %everytime in the while loop will find a highPriority
-    %find maximum priority
+    %find the patch with maximum priority
     max = -1;
     
     %high priority X, Y 畒夹
@@ -136,8 +166,9 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
            highPriority(i+patchIndex+1,j+patchIndex+1,:) = maskedImage(hpX+i, hpY+j, :);
        end
     end
-    figure;imshow(highPriority);title('highPriority');
+    %figure;imshow(highPriority);title('highPriority');
     
+    %STEP4 find the minimum exemplar
     
     %т程ê遏
     %find the most similar target(patch X patch)
@@ -162,9 +193,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
             if ty <= patchIndex || ty >= n-patchIndex
                 continue;
             end
-            %just show tx,ty
-            tx
-            ty
+
             %in mask
             %inside (tx, ty) patch
             %there can't be any mask == white inside
@@ -211,8 +240,9 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
     %show targetX and targetY in the command line
     targetX
     targetY
-    figure;imshow(target);title('target');
+    %figure;imshow(target);title('target');
     
+    %STEP5 copy image data from origin image
     
     %ready to copy the target to the highPriority
     for i=-patchIndex:patchIndex
@@ -223,14 +253,36 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
         end 
     end
     
+    %for showing result
+    tmpImage = maskedImage;
     colorTransform = makecform('lab2srgb');
-    maskedImage = applycform(maskedImage , colorTransform);
+    tmpImage = applycform(tmpImage , colorTransform);
+    figure(10);imshow(tmpImage);title('after fill in masked Image');
     
-    figure;imshow(maskedImage);title('after fill in masked Image');
-    figure;imshow(mask);title('mask after:');
+    %figure;imshow(mask);title('mask after:');
     
     fprintf('HAHAHAHAHAHAHAHAHA\n');
-    %update the confidence
+    
+    %STEP6 update the confidence
+    
+    % compute "confidence 
+    confidence = double(1-mask);
+    %figure;imshow(confidence);title('confidence');
+    
+    for i=1:indexM %–index禲Ω %run every index
+       count = 0;
+       for px=-patchIndex:patchIndex
+           for py=-patchIndex:patchIndex
+               if mask(index(i,1)+px, index(i,2)+py) == 0
+                   count = count + 1;
+               end
+           end
+       end
+       confidence(index(i,1), index(i,2)) = double(count/(patch*patch));
+    end
 
 end
+colorTransform = makecform('lab2srgb');
+maskedImage = applycform(maskedImage , colorTransform);
+figure;imshow(maskedImage);
 
