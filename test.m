@@ -144,14 +144,14 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
     %т程prioritypatch
     %everytime in the while loop will find a highPriority
     %find the patch with maximum priority
-    max = -1;
+    max = 0;
     
     %high priority X, Y 畒夹
     %high priority coordinate (hpX, hpY)
     hpX = 0;
     hpY = 0;
     for i=1:indexM
-        if priority(index(i,1), index(i,2) ) > max
+        if priority(index(i,1), index(i,2) ) >= max
             max = priority(index(i,1),index(i,2));
             hpX = index(i,1);
             hpY = index(i,2);
@@ -166,7 +166,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
            highPriority(i+patchIndex+1,j+patchIndex+1,:) = maskedImage(hpX+i, hpY+j, :);
        end
     end
-    %figure;imshow(highPriority);title('highPriority');
+    %figure(8);imshow(highPriority);title('highPriority');
     
     %STEP4 find the minimum exemplar
     
@@ -177,8 +177,8 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
     %磷 窱瓜娩
     min = 99999999;
     %to avoid "target" hit the border of originImage
-    targetX = 0;
-    targetY = 0;
+    targetX = 1;
+    targetY = 1;
     target = uint8(zeros(patch, patch, 3));
     
     %(tx,ty) is the center of patch*patch(81)
@@ -206,26 +206,33 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
                 for py=-patchIndex:patchIndex
                     if mask(tx+px, ty+py) == 255
                         ismask = 1;
+                        break;
                     else
                         tmptarget(px+patchIndex+1, py+patchIndex+1, :) = maskedImage(tx+px, ty+py,:);
                     end
+                end
+                if ismask == 1
+                    break;
                 end
             end
             
             if ismask == 1
                 continue;
             end
-            %figure;imshow(tmptarget);title('tmptarget');
+            %figure(7);imshow(tmptarget);title('tmptarget');
+            %figure(8);imshow(highPriority);title('highPriority');
             
             
             %compute SSD
             SSD = 0;
             for x=1:patch
                 for y=1:patch
-                    L = highPriority(x,y,1) - tmptarget(x,y,1); 
-                    a = highPriority(x,y,2) - tmptarget(x,y,2);
-                    b = highPriority(x,y,3) - tmptarget(x,y,3);
-                    SSD = SSD + L*L + a*a + b*b;
+                    if mask(hpX-patchIndex-1 + x, hpY-patchIndex-1 + y) == 0
+                        L = highPriority(x,y,1) - tmptarget(x,y,1); 
+                        a = highPriority(x,y,2) - tmptarget(x,y,2);
+                        b = highPriority(x,y,3) - tmptarget(x,y,3);
+                        SSD = SSD + L*L + a*a + b*b;
+                    end
                 end
             end
             
@@ -240,7 +247,11 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
     %show targetX and targetY in the command line
     targetX
     targetY
-    %figure;imshow(target);title('target');
+    colorTransform = makecform('lab2srgb');
+    targetShow = applycform(target , colorTransform);
+    highPriorityShow = applycform(highPriority , colorTransform);
+    figure(7);imshow(targetShow);title('target');
+    figure(8);imshow(highPriorityShow);title('highPriority');
     
     %STEP5 copy image data from origin image
     
@@ -257,11 +268,12 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
     tmpImage = maskedImage;
     colorTransform = makecform('lab2srgb');
     tmpImage = applycform(tmpImage , colorTransform);
-    figure(10);imshow(tmpImage);title('after fill in masked Image');
+    figure(9);imshow(tmpImage);title('tmpImage');
+    figure(10);imshow(mask);title('after fill in mask');
     
     %figure;imshow(mask);title('mask after:');
     
-    fprintf('HAHAHAHAHAHAHAHAHA\n');
+
     
     %STEP6 update the confidence
     
@@ -280,9 +292,10 @@ while ~isequal(mask, zeros(m,n) ) %as research 单 omega = 0ゎ
        end
        confidence(index(i,1), index(i,2)) = double(count/(patch*patch));
     end
+    fprintf('HAHAHAHAHAHAHAHAHA\n');
 
 end
 colorTransform = makecform('lab2srgb');
 maskedImage = applycform(maskedImage , colorTransform);
-figure;imshow(maskedImage);
+figure(3);imshow(maskedImage);
 
