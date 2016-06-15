@@ -1,8 +1,8 @@
 clear;
 clear all;
-%imageName = 'bungee.png';
-imageName = 'air';
-originImage = imread([imageName, '.jpg']);
+imageName = 'bungee';
+%imageName = 'air';
+originImage = imread([imageName, '.png']);
 
 %如果要重畫mask，把以下的註解取消
 %if you want to redraw mask, cancel the comment below
@@ -183,12 +183,12 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     
     %(tx,ty) is the center of patch*patch(81)
     %so (tx,ty) should in the patchIndex(4) to m-patchIndex(4) 
-    for tx=hpX-floor((patch*patch)/2):hpX+floor((patch*patch)/2)
+    for tx=hpX-floor((patch*patch*patch)/2):hpX+floor((patch*patch*patch)/2)
         %out of boundary
         if tx <= patchIndex || tx >= m-patchIndex
             continue;
         end
-        for ty=hpY-floor((patch*patch)/2):hpY+floor((patch*patch)/2)
+        for ty=hpY-floor((patch*patch*patch)/2):hpY+floor((patch*patch*patch)/2)
             %out of boundary
             if ty <= patchIndex || ty >= n-patchIndex
                 continue;
@@ -231,7 +231,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
                         L = highPriority(x,y,1) - tmptarget(x,y,1); 
                         a = highPriority(x,y,2) - tmptarget(x,y,2);
                         b = highPriority(x,y,3) - tmptarget(x,y,3);
-                        SSD = SSD + L*L + a*a + b*b;
+                        SSD = SSD + sqrt(double(L*L + a*a + b*b));
                     end
                 end
             end
@@ -270,11 +270,7 @@ while ~isequal(mask, zeros(m,n) ) %as research 等到 omega = 0為止
     tmpImage = applycform(tmpImage , colorTransform);
     figure(9);imshow(tmpImage);title('tmpImage');
     figure(10);imshow(mask);title('after fill in mask');
-    
-    %figure;imshow(mask);title('mask after:');
-    
-
-    
+     
     %STEP6 update the confidence
     
     % compute "confidence 
