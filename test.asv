@@ -1,16 +1,16 @@
 clear;
 clear all;
-%imageName = 'bungee';%(png)
+imageName = 'bungee';%(png)
 %imageName = 'air';
-imageName = 'aircondition';
+%imageName = 'aircondition';
 %imageName = 'plane';
-originImage = imread([imageName, '.jpg']);
+originImage = imread([imageName, '.png']);
 
 %如果要重畫mask，把以下的註解取消
 %if you want to redraw mask, cancel the comment below
-mask = im2uint8(roipoly(originImage));
-imwrite(mask, [imageName, '-mask.png']);
-%mask = imread([imageName, '-mask.png']);
+%mask = im2uint8(roipoly(originImage));
+%imwrite(mask, [imageName, '-mask.png']);
+mask = imread([imageName, '-mask.png']);
 
 
 %figure;imshow(img);
@@ -20,7 +20,7 @@ boundary = zeros(m,n);
 
 %patch的大小
 %size of patch
-patch = 9;
+patch = 11;
 
 maskedImage = originImage;
 for i=1:m
@@ -58,7 +58,7 @@ grayMaskedImage = rgb2gray(maskedImage);
 grayMaskedImage = im2single(grayMaskedImage);
 [fx,fy] = gradient(grayMaskedImage);
 gradtnorm = sqrt((fx .^2) + (fy .^2));
-data = gradtnorm;
+data = gradtnorm + log10(1+gradtnorm);
 %figure;imshow(fx);
 %figure;imshow(fy);
 %figure;imshow(data);title('data');
